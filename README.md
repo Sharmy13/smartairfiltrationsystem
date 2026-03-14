@@ -14,7 +14,7 @@ Simple and cost-effective implementation using Arduino
 
 Components Used:
 
-Arduino Uno
+Arduino Uno/ESP32
 
 Air Quality Sensor
 
