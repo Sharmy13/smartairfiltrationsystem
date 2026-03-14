@@ -1,0 +1,110 @@
+#include <DHT.h>
+#include <LiquidCrystal.h>
+
+// ---------- PIN DEFINITIONS ----------
+#define MQ2_PIN A0
+#define MQ135_PIN A1
+#define DHT_PIN 2
+#define RELAY_PIN 9      // Relay IN (ACTIVE-LOW)
+
+#define DHTTYPE DHT11
+
+// LCD Pins
+#define LCD_RS 7
+#define LCD_E  6
+#define LCD_D4 5
+#define LCD_D5 4
+#define LCD_D6 3
+#define LCD_D7 8
+
+// ---------- OBJECTS ----------
+DHT dht(DHT_PIN, DHTTYPE);
+LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
+
+// ---------- THRESHOLDS ----------
+int MQ2_ON  = 400;
+int MQ135_ON = 450;
+
+int MQ2_OFF  = 300;
+int MQ135_OFF = 350;
+
+// ---------- GLOBAL STATE ----------
+bool danger = false;
+
+// ---------- SETUP ----------
+void setup() {
+  Serial.begin(9600);
+
+  dht.begin();
+  lcd.begin(16, 2);
+
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, HIGH);   // 🔴 Fan OFF at start (ACTIVE-LOW)
+
+  Serial.println("SMART AIR FILTER SYSTEM");
+  Serial.println("------------------------");
+
+  lcd.setCursor(0, 0);
+  lcd.print(" SMART AIR ");
+  lcd.setCursor(0, 1);
+  lcd.print(" FILTER SYS ");
+  delay(2000);
+  lcd.clear();
+}
+
+// ---------- LOOP ----------
+void loop() {
+  int mq2Value = analogRead(MQ2_PIN);
+  int mq135Value = analogRead(MQ135_PIN);
+
+  float temp = dht.readTemperature();
+  float hum  = dht.readHumidity();
+
+  // ---------- CHECK DHT ----------
+  if (isnan(temp) || isnan(hum)) {
+    Serial.println("ERROR: DHT SENSOR NOT RESPONDING");
+    lcd.clear();
+    lcd.print("DHT ERROR");
+    delay(2000);
+    return;
+  }
+
+  // ---------- HYSTERESIS LOGIC ----------
+  if (!danger && (mq2Value > MQ2_ON || mq135Value > MQ135_ON)) {
+    danger = true;
+  }
+  else if (danger && (mq2Value < MQ2_OFF && mq135Value < MQ135_OFF)) {
+    danger = false;
+  }
+
+  // ---------- RELAY CONTROL (ACTIVE-LOW) ----------
+  if (danger) {
+    digitalWrite(RELAY_PIN, LOW);    // 🟢 Fan ON
+  } else {
+    digitalWrite(RELAY_PIN, HIGH);   // 🔴 Fan OFF
+  }
+
+  // ---------- SERIAL MONITOR ----------
+  Serial.println();
+  Serial.println("----- SENSOR VALUES -----");
+  Serial.print("MQ2 Gas Sensor   : "); Serial.println(mq2Value);
+  Serial.print("MQ135 Air Sensor : "); Serial.println(mq135Value);
+  Serial.print("Temperature      : "); Serial.print(temp); Serial.println(" C");
+  Serial.print("Humidity         : "); Serial.print(hum); Serial.println(" %");
+  Serial.print("Air Quality      : "); Serial.println(danger ? "DANGER" : "SAFE");
+  Serial.print("Fan Status       : "); Serial.println(danger ? "ON" : "OFF");
+  Serial.println("--------------------------");
+
+  // ---------- LCD ----------
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  lcd.print(temp, 1);
+  lcd.print("C H:");
+  lcd.print(hum, 0);
+  lcd.print("% ");
+
+  lcd.setCursor(0, 1);
+  lcd.print(danger ? "AIR: DANGER " : "AIR: SAFE   ");
+
+  delay(2000);
+}
