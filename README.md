@@ -26,7 +26,7 @@ Jumper Wires
 
 Power Supply
 
-Working Principle
+Working Principle:
 The air quality sensor continuously measures the level of pollutants in the air. The sensor data is sent to the Arduino Uno for processing. If the pollutant level exceeds the set threshold, the Arduino activates a relay module, which turns on the fan or air filter to purify the air. Once the air quality returns to a safe level, the system automatically switches off the filtration unit.
 
 Applications:
